@@ -274,7 +274,7 @@ class BigFloat : IComparable, IComparable<BigFloat>, IEquatable<BigFloat>
     }
     public BigFloat Sqrt()
     {
-        bool debug = !false;
+        bool debug = false;
 
         if( this == BigFloat.Zero ) return BigFloat.Zero;
         if( this.Sign < 0 ) throw new OverflowException( String.Format( "Cannot calculate square root from a negative number: {0}", this.ToString( 10, true ) ) );

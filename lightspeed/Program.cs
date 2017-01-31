@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -116,6 +117,8 @@ namespace lightspeed
 
         public static void Main( string[] args )
         {
+            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
+
 
             //Console.WriteLine( "{0}", BigFloat.Sqrt( BigFloat.One.ShiftDecimalRight(1) ).ToString( 100, true ) );
             Console.WriteLine( "{0}", BigFloat.Sqrt( 2 ).ToString( 1000, true ) );
@@ -137,8 +140,8 @@ namespace lightspeed
             //Console.WriteLine( "{0}", ( new BigFloat( 10 ).Pow( 100 ) ).ToString( 100, true ) );
 
             
-            decimal[] energies = new decimal[50];
-            decimal[] masses   = new decimal[50];
+            BigFloat[] energies = new BigFloat[50];
+            BigFloat[] masses   = new BigFloat[50];
 
             energies[0] = 1e-25m;
             masses[0]   = 1e-25m;
@@ -158,17 +161,39 @@ namespace lightspeed
 
             BigFloat speedOfLight = new BigFloat( 299792458.0m );
 
+            List<Tuple<int, int>> ll = new List<Tuple<int,int>>();
+
             for( int i = 0; i < energies.Length; ++i )
             {
                 for( int c = 0; c < masses.Length; ++c )
                 {
-                    //dataSheet[i + 1][c + 1] = String.Format( "{0}", VelocityCalculatorRelativistic( energies[i], masses[c] ) );
-                    dataSheet[i + 1][c + 1] = String.Format( "{0}", VelocityCalculatorRelativistic( energies[i], masses[c] ) / speedOfLight );
-                    //dataSheet[i + 1][c + 1] = String.Format( "{0}", VelocityError( energies[i], masses[c] ) );
+                    /*dataSheet[i + 1][c + 1] = String.Format( "{0}", VelocityCalculatorRelativistic( energies[i], masses[c] ) );
+                    dataSheet[i + 1][c + 1] = String.Format( "{0}", VelocityError( energies[i], masses[c] ) );*/
 
-                    Console.WriteLine( "{0:e} J {1:e} kg ==> {2} m/s", energies[i], masses[c], dataSheet[i + 1][c + 1] );
+                    //dataSheet[i + 1][c + 1] = String.Format( "{0}", VelocityCalculatorRelativistic( energies[i], masses[c] ) / speedOfLight );
+                    //Console.WriteLine( "{0:e} J {1:e} kg ==> {2} m/s", energies[i], masses[c], dataSheet[i + 1][c + 1] );
+
+                    ll.Add( Tuple.Create( i, c ) );
                 }
             }
+
+            object _sync = new object();
+            int count = 0;
+
+            Parallel.ForEach( ll, new ParallelOptions { MaxDegreeOfParallelism = 8 }, (tuple_l) =>
+                {
+                    int i = tuple_l.Item1;
+                    int c = tuple_l.Item2;
+                    String s = String.Format( "{0}", VelocityCalculatorRelativistic( energies[i], masses[c] ) );
+                    lock( _sync )
+                    {
+                        dataSheet[i + 1][c + 1] = s;
+                        ++count;
+                        Console.WriteLine( "{3:0.00}% {0:e} J {1:e} kg ==> {2} m/s", energies[i], masses[c], dataSheet[i + 1][c + 1], (double)count/(double)ll.Count*100.0 );
+                    }
+                }
+            );
+
 
             string text = "";
 
